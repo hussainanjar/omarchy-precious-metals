@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.hussainanjar.precious-metals",
   "name": "Precious Metals",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Hussain Fakhruddin",
   "license": "MIT",
   "description": "Precious-metal spot prices, local trend charts and configurable currencies and weight units.",
