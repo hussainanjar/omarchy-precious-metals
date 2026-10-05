@@ -16,7 +16,7 @@ if [[ -f $config_dir/shell.json ]]; then
   cp -a "$config_dir/shell.json" "$backup_dir/shell.json"
 fi
 mkdir -p "$backup_dir/staged"
-for file in manifest.json qmldir BarWidget.qml MetalsPanel.qml TrendPanel.qml QuoteFeed.qml QuoteRequest.qml Model.js README.md LICENSE; do
+for file in manifest.json qmldir BarWidget.qml MetalsPanel.qml TrendPanel.qml SettingsPanel.qml QuoteFeed.qml QuoteRequest.qml FxRequest.qml Model.js README.md LICENSE; do
   install -m 644 "$source_dir/$file" "$backup_dir/staged/$file"
 done
 

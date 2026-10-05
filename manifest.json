@@ -2,23 +2,135 @@
   "schemaVersion": 1,
   "id": "io.github.hussainanjar.precious-metals",
   "name": "Precious Metals",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Hussain Fakhruddin",
   "license": "MIT",
-  "description": "Live precious-metal spot prices in USD per troy ounce and AED per gram.",
-  "kinds": ["bar-widget"],
-  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "description": "Precious-metal spot prices, local trend charts and configurable currencies and weight units.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
   "barWidget": {
     "displayName": "Precious Metals",
-    "description": "Gold and silver in the bar; four metals and both units in the popup.",
+    "description": "Choose bar metals, currency and units; open Prices, Trend and Settings.",
     "category": "Info",
     "allowMultiple": false,
     "defaultSection": "center",
-    "defaults": { "displayMode": "AED/g", "refreshSeconds": 60, "usdToAed": 3.6725 },
+    "defaults": {
+      "currency": "AED",
+      "unit": "g",
+      "primaryMetal": "Gold",
+      "secondaryMetal": "Silver",
+      "barDisplay": "Selected",
+      "showReference": true,
+      "refreshSeconds": 60,
+      "usdToAed": 3.6725,
+      "chartMetal": "Gold",
+      "chartHours": 1
+    },
     "schema": [
-      { "key": "displayMode", "type": "enum", "label": "Bar units", "options": ["AED/g", "USD/oz", "Both"], "defaultValue": "AED/g" },
-      { "key": "refreshSeconds", "type": "number", "label": "Refresh interval (seconds, minimum 30)", "defaultValue": 60 },
-      { "key": "usdToAed", "type": "number", "label": "AED per USD", "defaultValue": 3.6725 }
+      {
+        "key": "currency",
+        "type": "enum",
+        "label": "Currency",
+        "options": [
+          "AED",
+          "USD",
+          "EUR",
+          "GBP",
+          "INR",
+          "JPY",
+          "CAD",
+          "AUD",
+          "CHF",
+          "CNY"
+        ],
+        "defaultValue": "AED"
+      },
+      {
+        "key": "unit",
+        "type": "enum",
+        "label": "Weight unit (oz = troy ounce)",
+        "options": [
+          "g",
+          "oz",
+          "kg"
+        ],
+        "defaultValue": "g"
+      },
+      {
+        "key": "primaryMetal",
+        "type": "enum",
+        "label": "First bar metal",
+        "options": [
+          "Gold",
+          "Silver",
+          "Platinum",
+          "Palladium"
+        ],
+        "defaultValue": "Gold"
+      },
+      {
+        "key": "secondaryMetal",
+        "type": "enum",
+        "label": "Second bar metal",
+        "options": [
+          "None",
+          "Gold",
+          "Silver",
+          "Platinum",
+          "Palladium"
+        ],
+        "defaultValue": "Silver"
+      },
+      {
+        "key": "barDisplay",
+        "type": "enum",
+        "label": "Bar price display",
+        "options": [
+          "Selected",
+          "Both"
+        ],
+        "defaultValue": "Selected"
+      },
+      {
+        "key": "showReference",
+        "type": "boolean",
+        "label": "Show USD reference column",
+        "defaultValue": true
+      },
+      {
+        "key": "refreshSeconds",
+        "type": "number",
+        "label": "Refresh interval (30\u20133600 seconds)",
+        "defaultValue": 60
+      },
+      {
+        "key": "usdToAed",
+        "type": "number",
+        "label": "Fixed AED per USD",
+        "defaultValue": 3.6725
+      },
+      {
+        "key": "chartMetal",
+        "type": "enum",
+        "label": "Chart metal",
+        "options": [
+          "Gold",
+          "Silver",
+          "Platinum",
+          "Palladium"
+        ],
+        "defaultValue": "Gold"
+      },
+      {
+        "key": "chartHours",
+        "type": "number",
+        "label": "Chart range (1, 6 or 24 hours)",
+        "defaultValue": 1
+      }
     ]
   }
 }

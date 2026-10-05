@@ -6,25 +6,29 @@ import "Model.js" as Model
 KeyboardPanel {
   id: root
   required property var feed
-  property real usdToAed: 3.6725
+  required property var widget
   property real refreshSeconds: 60
   property int tabIndex: 0
 
   focusTarget: keys
   contentWidth: fittedContentWidth(Style.space(520))
-  contentHeight: fittedContentHeight(content.implicitHeight)
+  contentHeight: fittedContentHeight(content.implicitHeight, Style.space(900))
 
-  PanelKeyCatcher {
+  Item {
     id: keys
     anchors.fill: parent
-    onCloseRequested: root.close()
-    onTabRequested: root.tabIndex = 1 - root.tabIndex
-    onMoveRequested: function(dx, dy) { if (root.tabIndex === 1 && dx) trend.cycleMetal(dx) }
-    onTextKey: function(text) {
-      var key = text.toLowerCase()
-      if (key === "r") root.feed.refresh()
-      else if (key === "t") root.tabIndex = 1 - root.tabIndex
-      else if (root.tabIndex === 1 && key === "u") trend.inAed = !trend.inAed
+    focus: true
+    Keys.priority: Keys.AfterItem
+    Keys.onPressed: function(event) {
+      if (event.key === Qt.Key_Escape) { root.close(); event.accepted = true; return }
+      if (root.tabIndex === 2 && settingsPanel.editing) return
+      var key = event.text.toLowerCase()
+      if (key === "r") { root.feed.refresh(); event.accepted = true }
+      else if (key === "t") { root.tabIndex = (root.tabIndex + 1) % 3; event.accepted = true }
+      else if (root.tabIndex === 1 && key === "u") { root.widget.cycleUnits(); event.accepted = true }
+      else if (root.tabIndex === 1 && (event.key === Qt.Key_Left || event.key === Qt.Key_Right)) {
+        trend.cycleMetal(event.key === Qt.Key_Left ? -1 : 1); event.accepted = true
+      }
     }
 
     Flickable {
@@ -84,6 +88,12 @@ KeyboardPanel {
             focusable: true
             onClicked: root.tabIndex = 1
           }
+          Button {
+            text: "Settings"
+            selected: root.tabIndex === 2
+            focusable: true
+            onClicked: root.tabIndex = 2
+          }
         }
 
         Row {
@@ -97,9 +107,9 @@ KeyboardPanel {
             font.pixelSize: Style.font.bodySmall
           }
           Text {
-            width: parent.width * 0.36
+            width: parent.width * (root.widget.preferences.showReference ? 0.36 : 0.72)
             horizontalAlignment: Text.AlignRight
-            text: "USD / troy oz"
+            text: root.widget.preferences.currency + " / " + Model.unitName(root.widget.preferences.unit)
             color: Color.muted
             font.family: Style.font.family
             font.pixelSize: Style.font.bodySmall
@@ -107,7 +117,8 @@ KeyboardPanel {
           Text {
             width: parent.width * 0.36
             horizontalAlignment: Text.AlignRight
-            text: "AED / gram"
+            visible: root.widget.preferences.showReference
+            text: "USD / troy oz"
             color: Color.muted
             font.family: Style.font.family
             font.pixelSize: Style.font.bodySmall
@@ -141,17 +152,18 @@ KeyboardPanel {
                 font.bold: true
               }
               Text {
-                width: parent.width * 0.36
+                width: parent.width * (root.widget.preferences.showReference ? 0.36 : 0.72)
                 horizontalAlignment: Text.AlignRight
-                text: metal.quote.price ? "$" + Model.numberText(metal.quote.price) : "—"
+                text: metal.quote.price ? Model.numberText(Model.convertedPrice(metal.quote.price, root.feed.conversionRate, root.widget.preferences.unit)) : "—"
                 color: Color.popups.text
                 font.family: Style.font.family
                 font.pixelSize: Style.font.body
               }
               Text {
+                visible: root.widget.preferences.showReference
                 width: parent.width * 0.36
                 horizontalAlignment: Text.AlignRight
-                text: metal.quote.price ? Model.numberText(Model.aedPerGram(metal.quote.price, root.usdToAed)) : "—"
+                text: metal.quote.price ? "$" + Model.numberText(metal.quote.price) : "—"
                 color: Color.popups.text
                 font.family: Style.font.family
                 font.pixelSize: Style.font.body
@@ -174,23 +186,30 @@ KeyboardPanel {
           width: parent.width
           visible: root.tabIndex === 1
           feed: root.feed
-          usdToAed: root.usdToAed
+          widget: root.widget
           refreshSeconds: root.refreshSeconds
+        }
+
+        SettingsPanel {
+          id: settingsPanel
+          width: parent.width
+          visible: root.tabIndex === 2
+          widget: root.widget
         }
 
         Text {
           visible: root.tabIndex === 0
           width: parent.width
           wrapMode: Text.Wrap
-          text: "1 USD = " + root.usdToAed + " AED · 1 troy oz = 31.1034768 g\nPure-metal spot value; retail premiums, taxes and making charges excluded."
-          color: Color.muted
+          text: root.feed.conversionStatus + " · 1 troy oz = 31.1034768 g\nPure-metal spot value; retail premiums, taxes and making charges excluded."
+          color: root.feed.fxOffline ? Color.urgent : Color.muted
           font.family: Style.font.family
           font.pixelSize: Style.font.bodySmall
         }
         Text {
           width: parent.width
-          text: root.tabIndex === 0 ? "gold-api.com · Tab trend · R refresh · Esc close"
-            : "Tab prices · Left/Right metal · U units · R refresh · Esc close"
+          text: root.tabIndex === 1 ? "T tabs · Left/Right metal · U units · R refresh · Esc close"
+            : "T tabs · Tab controls · R refresh · Esc close"
           wrapMode: Text.Wrap
           color: Color.muted
           font.family: Style.font.family

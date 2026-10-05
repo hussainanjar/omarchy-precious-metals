@@ -6,16 +6,15 @@ import "Model.js" as Model
 Column {
   id: root
   required property var feed
-  property real usdToAed: 3.6725
+  required property var widget
   property real refreshSeconds: 60
-  property int metalIndex: 0
-  property int hours: 1
-  property bool inAed: true
+  readonly property int metalIndex: Model.metalNames.indexOf(widget.preferences.chartMetal)
+  readonly property int hours: widget.preferences.chartHours
   property int hoverIndex: -1
   readonly property var metal: feed.rows[metalIndex]
   readonly property var points: Model.windowSamples(feed.history[metal.symbol], feed.now, hours)
   readonly property var stats: Model.trendStats(points)
-  readonly property string units: inAed ? "AED / gram" : "USD / troy oz"
+  readonly property string units: widget.preferences.currency + " / " + Model.unitName(widget.preferences.unit)
   readonly property real startTime: points.length ? Math.max(feed.now - hours * 3600000, points[0].updatedAt) : feed.now - hours * 3600000
   readonly property real span: Math.max(60000, feed.now - startTime)
   readonly property real paddingValue: stats ? Math.max((stats.high - stats.low) * 0.12, stats.last * 0.0001) : 1
@@ -23,11 +22,20 @@ Column {
   readonly property real upper: stats ? stats.high + paddingValue : 1
   readonly property color lineColor: Color.accent
   readonly property color gridColor: Color.muted
+  readonly property real axisWidth: Math.max(Style.space(74), axisMeasure.implicitWidth + Style.space(8))
   spacing: Style.space(12)
 
-  function value(price) { return inAed ? Model.aedPerGram(price, usdToAed) : price }
-  function priceText(price) { return (inAed ? "" : "$") + Model.numberText(value(price)) }
-  function cycleMetal(direction) { metalIndex = (metalIndex + direction + 4) % 4 }
+  Text {
+    id: axisMeasure
+    visible: false
+    text: root.priceText(root.upper)
+    font.family: Style.font.family
+    font.pixelSize: Style.font.bodySmall
+  }
+
+  function value(price) { return Model.convertedPrice(price, feed.conversionRate, widget.preferences.unit) }
+  function priceText(price) { return Model.numberText(value(price)) }
+  function cycleMetal(direction) { widget.updateSettings({ chartMetal: Model.metalNames[(metalIndex + direction + 4) % 4] }) }
   function xFor(point) { return (point.updatedAt - startTime) / span * plot.width }
   function yFor(point) { return plot.height - (point.price - lower) / (upper - lower) * plot.height }
   function repaint() { if (visible) plot.requestPaint() }
@@ -51,7 +59,7 @@ Column {
         fontSize: Style.font.bodySmall
         selected: root.metalIndex === index
         focusable: true
-        onClicked: root.metalIndex = index
+        onClicked: root.widget.updateSettings({ chartMetal: modelData })
       }
     }
   }
@@ -69,17 +77,17 @@ Column {
           text: modelData + "h"
           selected: root.hours === modelData
           focusable: true
-          onClicked: root.hours = modelData
+          onClicked: root.widget.updateSettings({ chartHours: modelData })
         }
       }
     }
     Item { width: Math.max(0, root.width - rangeButtons.width - unitButton.width - Style.space(8)); height: 1 }
     Button {
       id: unitButton
-      text: root.inAed ? "AED/g" : "USD/oz"
+      text: root.widget.preferences.currency + "/" + root.widget.preferences.unit
       bordered: true
       focusable: true
-      onClicked: root.inAed = !root.inAed
+      onClicked: root.widget.cycleUnits()
     }
   }
 
@@ -94,12 +102,12 @@ Column {
   }
   Text {
     width: parent.width
-    text: root.points.length >= 2
+    text: root.points.length >= 2 && root.feed.conversionRate > 0
       ? (root.stats.change > 0 ? "+" : root.stats.change < 0 ? "−" : "")
         + Model.numberText(Math.abs(root.value(root.stats.change))) + " ("
         + (root.stats.percent > 0 ? "+" : "") + root.stats.percent.toFixed(2)
         + "%) since " + Qt.formatDateTime(new Date(root.points[0].updatedAt), "HH:mm")
-      : "Waiting for more quotes to draw the trend."
+      : root.feed.conversionRate <= 0 ? root.feed.conversionStatus : "Waiting for more quotes to draw the trend."
     color: Color.muted
     font.family: Style.font.family
     font.pixelSize: Style.font.bodySmall
@@ -109,9 +117,9 @@ Column {
   Item {
     width: parent.width
     height: Style.space(210)
-    visible: root.points.length >= 2
+    visible: root.points.length >= 2 && root.feed.conversionRate > 0
     Item {
-      width: Style.space(74)
+      width: root.axisWidth
       height: parent.height
       Repeater {
         model: 3
@@ -129,7 +137,7 @@ Column {
     }
     Canvas {
       id: plot
-      x: Style.space(74)
+      x: root.axisWidth
       width: parent.width - x
       height: parent.height - Style.space(28)
       onWidthChanged: root.repaint()
@@ -213,6 +221,15 @@ Column {
     }
   }
 
+  Text {
+    width: parent.width
+    visible: root.widget.preferences.currency !== "USD"
+    text: root.feed.conversionStatus + ". Every chart point uses this conversion."
+    color: root.feed.fxOffline ? Color.urgent : Color.muted
+    font.family: Style.font.family
+    font.pixelSize: Style.font.bodySmall
+    wrapMode: Text.Wrap
+  }
   Text {
     width: parent.width
     visible: root.points.length < 2

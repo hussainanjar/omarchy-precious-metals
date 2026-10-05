@@ -1,6 +1,6 @@
 # Precious Metals for Omarchy
 
-A native Quickshell bar plugin for Omarchy Quattro. Gold and silver appear in the bar; click to see gold, silver, platinum and palladium in both USD per troy ounce and AED per gram.
+A native Quickshell bar plugin for Omarchy Quattro. Gold and silver appear in the bar by default; click for four-metal prices, locally collected trends, and settings for currency, weight unit and bar display.
 
 ![Precious Metals Trend tab](preview.png)
 
@@ -29,37 +29,53 @@ If an existing plugin still shows its old UI after an update, run `omarchy resta
 ## Controls
 
 - Left-click: open or close the price popup.
-- Right-click: cycle the bar through AED/g, USD/oz and both; the choice is saved.
+- Right-click: cycle gram, troy ounce and kilogram; the choice is saved.
 - Middle-click, popup Refresh, or R in the popup: refresh prices.
 - Escape or click outside: close the popup.
 - `!` beside a bar price: the quote is stale or its feed is unreachable.
 
-The popup always includes both units. A narrow vertical bar shows Au and Ag; the popup provides their prices.
+Prices use your selected currency and unit, with an optional USD/troy-ounce reference column. A narrow vertical bar shows the symbols of your chosen metals; the popup provides their prices.
 
 ## Trend chart
 
-Choose the **Trend** tab, select Gold, Silver, Platinum or Palladium, then choose 1h / 6h / 24h. Switch AED/g or USD/oz with the units button; hover over the chart to see a quote's time and price. Tab or T switches tabs, Left/Right selects a metal, and U changes chart units.
+Choose the **Trend** tab, select Gold, Silver, Platinum or Palladium, then choose 1h / 6h / 24h. Cycle weight units with the units button; hover over the chart to see a quote's time and price. T switches tabs, Tab focuses controls, Left/Right selects a metal, and U changes units. The chosen metal and range are saved.
 
 History builds from genuine provider quotes collected while the widget runs. The chart starts empty and draws after two distinct quote timestamps; earlier market history is not backfilled. Up to 24 hours are saved atomically in `~/.cache/omarchy-precious-metals/history.json` (or under `XDG_CACHE_HOME`). Gaps longer than three refresh intervals or three minutes break the line; repeated stale responses do not create new observations. The change is measured from the first collected quote in the selected window, not from the market's daily close.
 
 ## Configure
 
-Use the Omarchy widget settings or CLI:
+Open the **Settings** tab in the popup. Preferences save automatically:
+
+![Precious Metals Settings tab](settings-preview.png)
+
+- Currency: AED, USD, EUR, GBP, INR, JPY, CAD, AUD, CHF or CNY.
+- Weight: gram, troy ounce or kilogram.
+- First and optional second bar metal, and whether the bar also shows USD/oz.
+- Optional USD reference column, refresh interval and chart metal/range.
+- Configurable fixed AED-per-USD rate (press Apply rate or Enter).
+
+Changes apply to Prices, Trend and the bar. You can also use Omarchy widget settings or its CLI:
 
 ```bash
-omarchy bar set io.github.hussainanjar.precious-metals displayMode 'Both'
+omarchy bar set io.github.hussainanjar.precious-metals currency INR
+omarchy bar set io.github.hussainanjar.precious-metals unit g
+omarchy bar set io.github.hussainanjar.precious-metals barDisplay Both
 omarchy bar set io.github.hussainanjar.precious-metals refreshSeconds 60
 omarchy bar set io.github.hussainanjar.precious-metals usdToAed 3.6725
 omarchy bar move io.github.hussainanjar.precious-metals --section center
 ```
 
-Settings are stored in the widget's entry in `~/.config/omarchy/shell.json`. Refresh intervals below 30 seconds are clamped to 30 seconds. Invalid display modes and exchange rates fall back to AED/g and 3.6725.
+Settings are stored in the widget's entry in `~/.config/omarchy/shell.json`. The popup rejects invalid settings; externally configured refresh intervals are clamped to 30–3600 seconds. Old `displayMode` preferences remain supported when no explicit currency/unit setting exists.
 
 ## Pricing and freshness
 
 Prices come from the public [Gold API](https://gold-api.com/docs) `/price/XAU`, `/price/XAG`, `/price/XPT` and `/price/XPD` endpoints. The provider calls these real-time spot quotes. This widget polls them every 60 seconds by default; it is not a streaming tick feed. Manual refresh respects the provider's [30-second cache guidance](https://gold-api.com/llms.txt). All monitors share one feed and one history.
 
 AED/g = USD/troy oz × AED-per-USD ÷ 31.1034768. The default exchange rate is the [CBUAE reference rate](https://centralbank.ae/umbraco/Surface/Exchange/GetExchangeRateAllCurrency) of 3.6725 AED per USD; it is a configurable fixed conversion, not a separate live FX feed. These are pure-metal spot values. Jewellery purity, dealer premiums, making charges and taxes are excluded.
+
+Other currencies use the provider's `exchangeRate` from `/price/XAU/{currency}`, refreshed alongside prices. USD needs no conversion. Rates are cached locally; a failed request uses the last known rate and marks it offline. Without a saved rate, converted prices show a dash. Switching currencies cancels an outstanding currency request and applies the matching rate only.
+
+History always stores original USD/troy-ounce quotes. All points in a converted chart use the current or last known conversion rate; historical exchange-rate movements are not included. Gram values divide by 31.1034768; kilogram values multiply gram values by 1000. Switching currency or units preserves your recorded history.
 
 The popup shows the provider's quote timestamp in local time and its age. Quotes older than the greater of three refresh intervals or three minutes are marked stale, including when the source stops updating outside market hours. Requests time out after 15 seconds. A failed request keeps the last successful quote in memory and marks it offline; no successful quote means a dash rather than a fabricated price. The last saved quotes are restored across shell restarts and marked offline until a live response arrives.
 
@@ -70,6 +86,7 @@ omarchy plugin validate .
 node tests/model.test.cjs
 omarchy-shell io.github.hussainanjar.precious-metals status
 omarchy-shell io.github.hussainanjar.precious-metals refresh
+omarchy-shell io.github.hussainanjar.precious-metals settings
 omarchy-shell shell summon io.github.hussainanjar.precious-metals
 ```
 
@@ -89,4 +106,4 @@ Removing the plugin preserves locally collected history. To delete that history 
 
 MIT; see [LICENSE](LICENSE). Runtime dependencies are Omarchy Quattro, Qt Quick, Quickshell (including `Quickshell.Io`), and the `mkdir` command from coreutils. Installation uses Omarchy's CLI, Git, Bash, and jq. Node.js is needed only to run the development tests. No API key, background daemon, or additional Python package is needed.
 
-The plugin makes HTTPS requests only to `api.gold-api.com` for prices, reads and writes its history file in the user cache directory, and runs `mkdir -p` only for that cache directory. The optional local installer backs up the existing plugin and shell configuration before copying files and enabling or migrating the widget.
+The plugin makes HTTPS requests only to `api.gold-api.com` for prices and currency conversions, reads and writes its history/rate cache in the user cache directory, and runs `mkdir -p` only for that cache directory. Settings update only this widget's entry through Omarchy's plugin API. The optional local installer backs up the existing plugin and shell configuration before copying files and enabling or migrating the widget.

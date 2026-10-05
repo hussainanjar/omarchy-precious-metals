@@ -73,3 +73,56 @@ test('trend windows and changes use only actual collected observations', () => {
   assert.equal(model.trendStats([]), null);
   assert.equal(model.trendStats([{ price: 100 }]).percent, 0);
 });
+
+test('preferences migrate legacy display modes and preserve explicit choices', () => {
+  assert.equal(model.preferences({ displayMode: 'USD/oz' }).currency, 'USD');
+  assert.equal(model.preferences({ displayMode: 'USD/oz' }).unit, 'oz');
+  assert.equal(model.preferences({ displayMode: 'Both' }).barDisplay, 'Both');
+  const prefs = model.preferences({ displayMode: 'USD/oz', currency: 'INR', unit: 'kg', refreshSeconds: 99999 });
+  assert.equal(prefs.currency, 'INR');
+  assert.equal(prefs.unit, 'kg');
+  assert.equal(prefs.refreshSeconds, 3600);
+  assert.equal(model.preferences({ currency: 'invalid', unit: 'lb', chartHours: 12 }).chartHours, 1);
+});
+
+test('converts all three weight units without inventing a missing FX rate', () => {
+  const ounce = model.gramsPerTroyOunce;
+  assert.ok(Math.abs(model.convertedPrice(ounce, 96.4, 'g') - 96.4) < 1e-9);
+  assert.equal(model.convertedPrice(100, 0.88, 'oz'), 88);
+  assert.ok(Math.abs(model.convertedPrice(ounce, 96.4, 'kg') - 96400) < 1e-9);
+  assert.equal(model.convertedPrice(100, 0, 'g'), null);
+  assert.equal(model.numberText(model.convertedPrice(100, undefined, 'oz')), '—');
+  assert.equal(model.convertedPrice(-100, 0.88, 'oz'), -88);
+});
+
+test('currency responses must match the requested currency and contain a valid rate', () => {
+  const response = { ...raw, currency: 'EUR', exchangeRate: 0.88 };
+  assert.equal(model.normalizeRate(response, 'EUR', now).rate, 0.88);
+  for (const change of [{ currency: 'INR' }, { symbol: 'XAG' }, { exchangeRate: 0 },
+    { exchangeRate: '0.88' }, { exchangeRate: Infinity }, { updatedAt: null },
+    { updatedAt: '2026-10-06T00:00:00Z' }]) {
+    assert.throws(() => model.normalizeRate({ ...response, ...change }, 'EUR', now));
+  }
+});
+
+test('invalid settings patches are rejected before any preferences are saved', () => {
+  model.validatePatch({ currency: 'INR', unit: 'kg', chartHours: 24, secondaryMetal: 'None', showReference: false });
+  for (const patch of [null, [], { currency: 'XYZ' }, { unit: 'lb' }, { refreshSeconds: 29 },
+    { refreshSeconds: 3601 }, { usdToAed: -1 }, { usdToAed: Infinity },
+    { showReference: 'false' }, { chartHours: 12 }, { unknown: true }]) {
+    assert.throws(() => model.validatePatch(patch));
+  }
+});
+
+test('bar metal selection orders, deduplicates and marks missing conversions', () => {
+  const quote = model.normalizeQuote(raw, 'XAU', now);
+  const rows = [{ name: 'Gold', shortName: 'Au', quote, error: '' },
+    { name: 'Silver', shortName: 'Ag', quote, error: '' }];
+  let prefs = model.preferences({ primaryMetal: 'Silver', secondaryMetal: 'Gold', currency: 'EUR', unit: 'oz' });
+  assert.match(model.selectedBarLabel(rows, prefs, 0.88, false, now, false), /^Ag 3,637\.22.*Au 3,637\.22.*EUR\/oz$/);
+  prefs = model.preferences({ primaryMetal: 'Silver', secondaryMetal: 'Silver', currency: 'INR' });
+  const label = model.selectedBarLabel(rows, prefs, 0, true, now, false);
+  assert.equal((label.match(/Ag/g) || []).length, 1);
+  assert.match(label, /^Ag — ! INR\/g$/);
+  assert.doesNotMatch(label, /Au/);
+});
