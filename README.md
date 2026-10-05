@@ -2,7 +2,7 @@
 
 A native Quickshell bar plugin for Omarchy Quattro. Gold and silver appear in the bar by default; click for four-metal prices, locally collected trends, and settings for currency, weight unit and bar display.
 
-![Precious Metals Trend tab](preview.png)
+![Precious Metals Trend tab showing gold in USD per troy ounce](preview.png)
 
 ## Install
 
@@ -68,6 +68,10 @@ omarchy bar move io.github.hussainanjar.precious-metals --section center
 Settings are stored in the widget's entry in `~/.config/omarchy/shell.json`. The popup rejects invalid settings; externally configured refresh intervals are clamped to 30–3600 seconds. Old `displayMode` preferences remain supported when no explicit currency/unit setting exists.
 
 ## Pricing and freshness
+
+Example Prices tab with **USD / troy ounce** selected:
+
+![Precious Metals Prices tab showing all four metals in USD per troy ounce](usd-prices-preview.png)
 
 Prices come from the public [Gold API](https://gold-api.com/docs) `/price/XAU`, `/price/XAG`, `/price/XPT` and `/price/XPD` endpoints. The provider calls these real-time spot quotes. This widget polls them every 60 seconds by default; it is not a streaming tick feed. Manual refresh respects the provider's [30-second cache guidance](https://gold-api.com/llms.txt). All monitors share one feed and one history.
 
