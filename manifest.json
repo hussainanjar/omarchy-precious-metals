@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.hussainanjar.precious-metals",
+  "name": "Precious Metals",
+  "version": "1.1.0",
+  "author": "Hussain Fakhruddin",
+  "license": "MIT",
+  "description": "Live precious-metal spot prices in USD per troy ounce and AED per gram.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "Precious Metals",
+    "description": "Gold and silver in the bar; four metals and both units in the popup.",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "center",
+    "defaults": { "displayMode": "AED/g", "refreshSeconds": 60, "usdToAed": 3.6725 },
+    "schema": [
+      { "key": "displayMode", "type": "enum", "label": "Bar units", "options": ["AED/g", "USD/oz", "Both"], "defaultValue": "AED/g" },
+      { "key": "refreshSeconds", "type": "number", "label": "Refresh interval (seconds, minimum 30)", "defaultValue": 60 },
+      { "key": "usdToAed", "type": "number", "label": "AED per USD", "defaultValue": 3.6725 }
+    ]
+  }
+}

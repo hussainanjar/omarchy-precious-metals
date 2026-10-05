@@ -1,0 +1,5 @@
+.env
+.env.*
+*.log
+history.json
+.DS_Store

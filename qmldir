@@ -1,0 +1,4 @@
+singleton MetalFeed 1.0 QuoteFeed.qml
+QuoteRequest 1.0 QuoteRequest.qml
+MetalsPanel 1.0 MetalsPanel.qml
+TrendPanel 1.0 TrendPanel.qml
