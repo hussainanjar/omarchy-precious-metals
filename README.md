@@ -22,7 +22,7 @@ bash install.sh
 
 The installer validates the plugin, copies it to `~/.config/omarchy/plugins/io.github.hussainanjar.precious-metals`, saves a backup of the shell configuration and any previous copy, then enables it in the center section beside the calendar. No root access, API key, additional daemon or Python package is required. Omarchy hot-reloads the plugin.
 
-The local installer migrates the prototype ID and preserves its inline settings, bar position, and saved history.
+The local installer migrates the prototype ID and preserves its inline settings, bar position, and saved history. Migration preserves the existing shell configuration's permissions and ownership; backups and temporary migration files are created privately.
 
 If an existing plugin still shows its old UI after an update, run `omarchy restart shell` to clear Quickshell's component cache.
 
@@ -88,6 +88,7 @@ The popup shows the provider's quote timestamp in local time and its age. Quotes
 ```bash
 omarchy plugin validate .
 node tests/model.test.cjs
+node tests/install.test.cjs
 omarchy-shell io.github.hussainanjar.precious-metals status
 omarchy-shell io.github.hussainanjar.precious-metals refresh
 omarchy-shell io.github.hussainanjar.precious-metals settings

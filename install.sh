@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+# Backups and migration output can contain private widget settings.
+umask 077
 # Rescanning a busy shell can exceed the CLI's two-second default.
 export OMARCHY_SHELL_IPC_TIMEOUT="${OMARCHY_SHELL_IPC_TIMEOUT:-10s}"
 
@@ -13,7 +15,7 @@ backup_dir="$config_dir/plugin-backups/precious-metals-$(date +%Y%m%d-%H%M%S)-$$
 omarchy plugin validate "$source_dir"
 mkdir -p "$backup_dir" "$config_dir/plugins"
 if [[ -f $config_dir/shell.json ]]; then
-  cp -a "$config_dir/shell.json" "$backup_dir/shell.json"
+  cp -aL "$config_dir/shell.json" "$backup_dir/shell.json"
 fi
 mkdir -p "$backup_dir/staged"
 for file in manifest.json qmldir BarWidget.qml MetalsPanel.qml TrendPanel.qml SettingsPanel.qml QuoteFeed.qml QuoteRequest.qml FxRequest.qml Model.js README.md LICENSE; do
@@ -39,7 +41,8 @@ if [[ $plugin_id == io.github.hussainanjar.precious-metals && -d $legacy_dir ]];
       | .disabledPlugins = ((.disabledPlugins // []) | map(
         if . == "local.precious-metals" then $id else . end))
     ' "$config_dir/shell.json" > "$backup_dir/migrated-shell.json"
-    install -m 644 "$backup_dir/migrated-shell.json" "$config_dir/shell.json"
+    # Keep the existing inode, permissions, ownership, ACLs and symlink target.
+    cat "$backup_dir/migrated-shell.json" > "$config_dir/shell.json"
   fi
   mv "$legacy_dir" "$backup_dir/legacy-plugin"
 fi
