@@ -7,6 +7,53 @@ vm.runInContext(fs.readFileSync(`${__dirname}/../Model.js`, 'utf8'), model);
 const now = Date.parse('2026-10-05T04:30:00Z');
 const raw = { symbol: 'XAU', currency: 'USD', price: 4133.2, updatedAt: '2026-10-05T04:29:30Z' };
 
+test('current widget settings take precedence over stale bar-slot settings', () => {
+  const id = 'io.github.hussainanjar.precious-metals';
+  const stale = { currency: 'CHF', unit: 'g' };
+  const saved = { id, currency: 'AED', unit: 'oz', chartHours: 6 };
+  for (const section of ['left', 'center', 'right']) {
+    const config = { layout: { [section]: [{ id: 'other.plugin', currency: 'USD' }, saved] } };
+    assert.equal(model.widgetSettings(config, id, stale), saved);
+    assert.equal(model.preferences(model.widgetSettings(config, id, stale)).currency, 'AED');
+  }
+  assert.equal(model.widgetSettings(null, id, stale), stale);
+  assert.equal(model.widgetSettings({ layout: { center: [] } }, id, stale), stale);
+  assert.equal(model.preferences(model.widgetSettings({ layout: { center: [id] } }, id, stale)).currency, 'AED');
+});
+
+test('settings updates preserve saved preferences and accept an already-saved selection', () => {
+  const id = 'io.github.hussainanjar.precious-metals';
+  let stored = { id, currency: 'AED', unit: 'g', chartHours: 6 };
+  let writes = 0;
+  const widget = vm.createContext({
+    Model: model, moduleName: id, settings: { currency: 'CHF', unit: 'g', chartHours: 1 }, settingsError: ''
+  });
+  widget.root = widget;
+  Object.defineProperty(widget, 'currentSettings', { get: () => stored });
+  widget.bar = { shell: { updateEntryInline(target, entry) {
+    assert.equal(target, id);
+    writes++;
+    stored = JSON.parse(JSON.stringify(entry));
+    return true;
+  } } };
+  // Exercise the actual QML updater with stale slot settings and a scoped API.
+  const qml = fs.readFileSync(`${__dirname}/../BarWidget.qml`, 'utf8');
+  const updater = qml.match(/  function updateSettings\(patch\) \{[\s\S]*?\n  \}/)[0];
+  vm.runInContext(updater, widget);
+  assert.equal(widget.updateSettings({ currency: 'AED' }), true);
+  assert.equal(writes, 0);
+  assert.equal(widget.updateSettings({ unit: 'oz' }), true);
+  assert.equal(stored.currency, 'AED');
+  assert.equal(stored.chartHours, 6);
+  assert.equal(stored.unit, 'oz');
+  assert.equal(writes, 1);
+  widget.bar.shell.updateEntryInline = () => false;
+  assert.equal(widget.updateSettings({ unit: 'kg' }), false);
+  assert.match(widget.settingsError, /Could not save/);
+  assert.equal(widget.updateSettings({ currency: 'AED' }), true);
+  assert.equal(widget.settingsError, '');
+});
+
 test('converts a troy ounce to grams before converting currency', () => {
   assert.ok(Math.abs(model.aedPerGram(31.1034768, 3.6725) - 3.6725) < 1e-12);
   assert.equal(model.numberText(model.aedPerGram(raw.price, 3.6725)), '488.02');

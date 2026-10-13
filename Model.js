@@ -3,6 +3,23 @@ var gramsPerTroyOunce = 31.1034768;
 var currencies = ["AED", "USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD", "CHF", "CNY"];
 var metalNames = ["Gold", "Silver", "Platinum", "Palladium"];
 
+// The bar can reinject an older slot snapshot after an inline settings update.
+// Prefer our own entry in the shell's current configuration when available.
+function widgetSettings(barConfig, id, fallback) {
+  var layout = barConfig && barConfig.layout;
+  var sections = ["left", "center", "right"];
+  for (var s = 0; layout && s < sections.length; s++) {
+    var entries = layout[sections[s]];
+    if (!Array.isArray(entries)) continue;
+    for (var i = 0; i < entries.length; i++) {
+      var entry = entries[i];
+      if (entry && entry.id === id) return entry;
+      if (entry === id) return {};
+    }
+  }
+  return fallback || {};
+}
+
 function preferences(settings) {
   var s = settings || {};
   var legacyUsd = s.displayMode === "USD/oz";

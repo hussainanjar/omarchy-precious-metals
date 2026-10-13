@@ -9,7 +9,8 @@ BarWidget {
   id: root
   moduleName: "io.github.hussainanjar.precious-metals"
 
-  readonly property var preferences: Model.preferences(settings)
+  readonly property var currentSettings: Model.widgetSettings(bar && bar.shell ? bar.shell.barConfig : null, moduleName, settings)
+  readonly property var preferences: Model.preferences(currentSettings)
   readonly property real refreshSeconds: preferences.refreshSeconds
   readonly property real usdToAed: preferences.usdToAed
   property string settingsError: ""
@@ -26,10 +27,10 @@ BarWidget {
   function refresh() { quoteFeed.refresh() }
   function updateSettings(patch) {
     try { Model.validatePatch(patch) } catch (e) { settingsError = e.message; return false }
-    var changed = Object.keys(patch).some(function(name) { return root.settings[name] !== patch[name] })
+    var changed = Object.keys(patch).some(function(name) { return root.currentSettings[name] !== patch[name] })
     if (!changed) { settingsError = ""; return true }
     var entry = { id: moduleName }
-    for (var key in settings) if (key !== "id") entry[key] = settings[key]
+    for (var key in currentSettings) if (key !== "id") entry[key] = currentSettings[key]
     for (var name in patch) entry[name] = patch[name]
     if (!bar || !bar.shell || typeof bar.shell.updateEntryInline !== "function"
       || bar.shell.updateEntryInline(moduleName, entry) === false) {
